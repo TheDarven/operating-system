@@ -5,17 +5,21 @@ uint32_t cursorCol = 0;
 uint8_t colorBackground = 0;
 uint8_t colorText = 15;
 
+// Retourne la case mémoire associée à une position de l'écran
 uint16_t *ptr_mem(uint32_t lig, uint32_t col) {
     return (uint16_t *) (0xB8000 + 2 * (lig * 80 + col));
 }
 
+//Ecrit un caractère sur l'écran à la position indiquée
 void ecrit_car(uint32_t lig, uint32_t col, char c, uint8_t cb, uint8_t ct) {
     uint16_t* carAdress = ptr_mem(lig, col);
     
     uint8_t ascii = (int)c;
+    // Color Background - Noir
     cb = cb & 0x7;
+    // Color Text - Blanc
     ct = ct & 0xF;
-
+    // bits 15-8 : format | bits 7-0 : caractère
     *carAdress = (( (cb << 4) | ct ) << 8 ) | ascii;
 }
 
@@ -74,7 +78,9 @@ void traiter_car(char c) {
             break;
         case '\t':
             newCol = cursorCol + 8;
+            // Aller à la tabulation la plus proche
             newCol -= newCol % 8;
+            // Si on arrive à la fin de la ligne
             if (newCol > 79) {
                 newCol = 79;
             }
@@ -101,6 +107,7 @@ void avancer_curseur() {
 
 void defilement(void) {
     uint32_t sizeOfBloc = NB_COL * 2 * (NB_ROW - 1);
+    // On écrase les 79 première lignes par le contenu des 79 dernières
     memmove(ptr_mem(0, 0), ptr_mem(1, 0), sizeOfBloc);
     for (uint32_t col = 0; col < NB_COL; col++) {
         ecrit_car(NB_ROW - 1, col, ' ', colorBackground, colorText);
