@@ -19,8 +19,7 @@ extern enum State {
 typedef struct {
     int pid;
     enum State state;
-    //char name[MAX_NAME_LENGTH];
-    char* name;
+    char name[MAX_NAME_LENGTH];
     uint32_t context[5];
     uint32_t executionStack[STACK_SIZE];
 } Process;
