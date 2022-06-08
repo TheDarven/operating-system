@@ -4,6 +4,8 @@
 #define MAX_NAME_LENGTH 256
 #define STACK_SIZE 256
 
+#define ESP 1
+
 #ifndef PROCESS_H
 #define PROCESS_H
 
