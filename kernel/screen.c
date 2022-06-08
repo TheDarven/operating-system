@@ -60,7 +60,7 @@ void traiter_car(char c) {
     }
 
     // Traitements spéciaux
-    uint32_t newCol;
+    uint32_t newCol, newCursorRow;
     switch(c) {
         case '\b':
             if (cursorCol != 0) {
@@ -68,7 +68,12 @@ void traiter_car(char c) {
             }
             break;
         case '\n':
-            place_curseur((cursorRow + 1) % NB_ROW, 0);
+            newCursorRow = cursorRow + 1;
+            if (newCursorRow % NB_ROW == 0) {
+                newCursorRow--;
+                defilement();
+            }
+            place_curseur(newCursorRow, 0);
             break;
         case '\f':
             efface_ecran();
