@@ -6,3 +6,8 @@
 extern Process processTable[NBPROC];
 
 extern Process* runningProcess;
+
+
+void ordonnance(void);
+
+int chprio(int pid, int newprio);

@@ -22,6 +22,8 @@ typedef struct {
     char name[MAX_NAME_LENGTH];
     uint32_t context[5];
     uint32_t executionStack[STACK_SIZE];
+    unsigned long time;
+    unsigned priority;
 } Process;
 
 #endif
