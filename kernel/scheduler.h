@@ -1,13 +1,21 @@
+#ifndef __SCHEDULER_H__
+#define __SCHEDULER_H__
+
 #include "process.h"
+#include "../shared/string.h"
 
-#define NBPROC 2
 #define SCHEDFREQ 50
-
-extern Process processTable[NBPROC];
 
 extern Process* runningProcess;
 
-
 void ordonnance(void);
 
-int chprio(int pid, int newprio);
+void initIdle(void);
+
+void addProcessToQueue(Process* process);
+
+void removeProcessFromQueue(Process* process);
+
+Process* getHighestPriorityProcess();
+
+#endif

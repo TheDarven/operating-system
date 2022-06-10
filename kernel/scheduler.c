@@ -1,58 +1,60 @@
 #include "scheduler.h"
+#include "../shared/queue.h"
+#include "ctx_sw.h"
 
-Process* runningProcess = 0;
+Process* runningProcess = NULL;
 
-Process processTable[NBPROC] = {0};
+link processQueue = LIST_HEAD_INIT(processQueue);
+
 
 // La fonction ordonnance doit être adaptée pour implanter la politique du tourniquet,
 // qui active les processus dans l'ordre de leur pid : 0, 1, 2, 3, 0, 1, 2, 3, etc
 void ordonnance(void) {
+    // Traitement si la liste des processus est pas vide
+    if (!queue_empty(&processQueue)) {
+        // Réordonne la liste selon les priorités
+        Process* nextProcess = queue_out(&processQueue, Process, next);
+        addProcessToQueue(nextProcess);
 
-    // Cherche le prochain processus à lancer
-    Process nextProcess = processTable[0];
-    for(int i = 0; i < NBPROC; i++) {
-        if(processTable[i].priority > nextProcess.priority || processTable[i].priority == nextProcess.priority && processTable[i].time < nextProcess.time) {
-            nextProcess = processTable[i];
+        // Changement de contexte si on change de processus
+        if (runningProcess != nextProcess) {
+            nextProcess->state = RUNNING;
+
+            if (runningProcess == NULL) {
+                runningProcess = nextProcess;
+            } else {
+                Process* exRunningProcess = runningProcess;
+                exRunningProcess->state = READY;
+
+                runningProcess = nextProcess;
+                runningProcess->state = RUNNING;
+
+                ctx_sw((exRunningProcess->context), (nextProcess->context));
+            }
         }
-    }
-
-    // Le processus en cours d'exécution donne la main au processus plus prioritaire
-    if (runningProcess->context != nextProcess.context) {
-        // runningProcess->time 
-
-        ctx_sw(runningProcess->context, nextProcess.context);
-        runningProcess = &nextProcess;
+    } else {
+        // TODO : Kill de 1
     }
 }
 
-
-// Permet de changer la priorité d'un processus donné
-int chprio(int pid, int newprio) {
-
-    // Retourne une valeur négative si la valeur de 'newprio' n'est pas appropriée
-    if(newprio < 0 || newprio > MAXPRIO) {
-        return -1;
-    }
-
-    int i, lastPriority = -1;
-    Process process;
-
-    // Récupération du processus avec le pid donné
-    for(i = 0; i < NBPROC; i++) {
-        if(processTable[i].pid == pid) {
-            process = processTable[i];
-            lastPriority = process.priority;
-            break;
-        }
-    }
-
-    // Changement de la priorité du processus
-    process.priority = newprio;
-
-    // Met à jour l'ordonnancement des processus
-    ordonnance();
-
-    // Retourne l'ancienne priorité du processus
-    return lastPriority;
-
+void addProcessToQueue(Process* process) {
+    queue_add(process, &processQueue, Process, next, priority);
 }
+
+void removeProcessFromQueue(Process* process) {
+    queue_del(process, next);
+}
+
+Process* getHighestPriorityProcess() {
+    return queue_top(&processQueue, Process, next);
+}
+
+
+// Remplir la processQueue
+    // Quand on créer un processus
+    // Quand un processus repasse à READY
+
+// Enlever un processus de la queue
+    // Un processus est terminé
+    // Un processus bloqué, interrompu ou Endormis
+
