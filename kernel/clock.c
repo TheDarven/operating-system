@@ -1,6 +1,6 @@
 #include "clock.h"
 
-unsigned long nbInterruptions = 0;
+unsigned long ticks = 0;
 
 void clock_settings(unsigned long *quartz, unsigned long *ticks) {
     *quartz = QUARTZ;
@@ -8,15 +8,11 @@ void clock_settings(unsigned long *quartz, unsigned long *ticks) {
 }
 
 unsigned long current_clock() {
-    return nbInterruptions;
+    return ticks;
 }
 
 void wait_clock(unsigned long clock) {
     clock++;
-}
-
-void increment_nb_interruption() {
-    nbInterruptions++;
 }
 
 void set_Quartz() {

@@ -8,14 +8,24 @@
 
 extern Process* runningProcess;
 
+extern link waitQueueHead;
+
 void ordonnance(void);
 
 void initIdle(void);
 
-void addProcessToQueue(Process* process);
+void addProcessToReadyQueue(Process* process);
 
-void removeProcessFromQueue(Process* process);
+void removeProcessFromReadyQueue(Process* process);
+
+int isReadyQueueEmpty();
 
 Process* getHighestPriorityProcess();
+
+void addProcessToWaitQueue(Process* process);
+
+void removeProcessFromWaitQueue(Process* process);
+
+int isWaitQueueEmpty();
 
 #endif
