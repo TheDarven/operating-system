@@ -1,7 +1,13 @@
 #include "process.h"
 #include "scheduler.h"
 
+/* 
+    LOCAL VARS
+*/
+
 Process* processTable[NBPROC] = {0};
+
+link deleteQueueHead = LIST_HEAD_INIT(deleteQueueHead);
 
 int nbStartProcess = 0;
 
@@ -15,35 +21,15 @@ Process* getProcessByPid(int pid) {
     return NULL;
 }
 
+/*
+    GETTERS / SETTERS
+*/
 
 // La valeur de retour de 'getpid' est le pid du processus appelant cette primitive
 int getpid(void) {
     return runningProcess->pid;
 }
 
-
-// TODO : Attention, ne sait pas encore comment récupérer les fils d'un processus !!
-/* int waitpid(int pid, int *retvalp) {
-
-    // Si le paramètre pid est négatif, le processus appelant attend qu'un de ses fils, n'importe lequel,
-    // soit terminé et récupère (le cas échéant) sa valeur de retour dans *retvalp, à moins que retvalp soit nul.
-    // Cette fonction renvoie une valeur strictement négative si aucun fils n'existe ou sinon le pid de celui
-    // dont elle aura récupéré la valeur de retour.
-    if (pid < 0) {
-        int *result = retvalp;
-        // Parcours la liste des fils du processus dont on connaît le pid, puis traite le premier qui est terminé
-        for(//Parcours des fils) {
-            if(//Si le fils a terminé) {
-                // On stock le résultat du fils dans 'retvalp'
-                // return le pid du fils
-            }
-        }
-    } else {
-
-    }
-    
-}
-*/
 
 // Retourne la priorité d'un processus dont on connaît le pid.
 int getprio(int pid) {    
@@ -52,6 +38,10 @@ int getprio(int pid) {
         return -1;
     }
     return process->priority;
+}
+
+int getNbStartProcess() {
+    return nbStartProcess;
 }
 
 // Permet de changer la priorité d'un processus donné
@@ -66,7 +56,7 @@ int chprio(int pid, int newprio) {
     Process* process = getProcessByPid(pid);
     
     // Si aucun processus n'a ce PID
-    if (process == NULL) {
+    if (process == NULL || process->state == ZOMBIE) {
         return -1;
     }
 
@@ -80,15 +70,14 @@ int chprio(int pid, int newprio) {
     // Changement de la priorité du processus
     process->priority = newprio;
 
-    removeProcessFromQueue(process);
-
-    addProcessToQueue(process);
+    removeProcessFromReadyQueue(process);
+    addProcessToReadyQueue(process);
 
     // Met à jour l'ordonnancement des processus
     // Si il est en tête de la queue, il doit être lancer car cela signifie soit :
     // - qu'il est le premier processus
     // - qu'il est le processus avec la plus haute priorité
-    if (getHighestPriorityProcess() == process) {
+    if (getHighestPriorityProcess() == process || runningProcess == process) {
         ordonnance();
     }
     
@@ -97,52 +86,61 @@ int chprio(int pid, int newprio) {
 }
 
 
-// Permet de mettre fin à un processus donné
-int kill(int pid) {
-    
-    // Récupération du processus dont on connaît le pid
-    Process* process;
-    int i, find = 0;
+void switchState(Process* process, enum State newState) {
 
-    // Retire le processus de la table des processus
-    for(i = 0; i < nbStartProcess; i++) {
-        if (find == 0) {
-            if(processTable[i]->pid == pid) {
-                process = processTable[i];
-                find = 1;
-            }
-        } else {
-            processTable[i - 1] = processTable[i];
-        }
+    switch(newState) {
+
+        case ZOMBIE:
+            removeProcessFromReadyQueue(process);
+            removeProcessFromWaitQueue(process);
+            process->priority = 1;
+            addZombieChildren(process->parent, process);
+        break;
+
+        case BLOCKED_CHILD:
+            removeZombieChild(process);
+            removeProcessFromReadyQueue(process);
+            removeProcessFromWaitQueue(process);
+        break;
+
+        case SLEEP:
+            removeZombieChild(process);
+            removeProcessFromReadyQueue(process);
+            addProcessToWaitQueue(process);
+        break;
+
+        case RUNNING:
+            removeZombieChild(process);
+            addProcessToReadyQueue(process);
+            removeProcessFromWaitQueue(process);
+        break;
+        
+        case READY:
+            removeZombieChild(process);
+            removeProcessFromWaitQueue(process);
+        break;
+
+        case BLOCKED_SEMA:
+            // TODO
+        break;
+
+        case BLOCKED_IO:
+            // TODO
+        break;
+        
     }
-    
-    // Si le processus n'a pas été trouvé
-    if(find == 0) {
-        return -1;
-    }
 
-    nbStartProcess--;
-
-    // Retire le processus de la file d'attente
-    removeProcessFromQueue(process);
-
-    // Arrête le processus si il est en cours d'exécution
-    if (runningProcess == process) {
-        ordonnance();
-    }
-
-    // [USER] Free le context (user/mem.h)
-
-    mem_free(process, sizeof(Process));
-    
-    return 0;
+    process->state = newState;
 }
 
+/*
+    PROCESS LIFECYLE
+*/
 
 int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name, void *arg) {
     ssize++; // [USER] Supprimer cette ligne
     
-    // Si l'un des paramètres est incorrect
+    // Si le paramètre 'prio' est incorrect
     if (prio < 1 || prio > MAXPRIO) {
         return -1;
     }
@@ -154,48 +152,263 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
         return -1;
     }
 
-    // Initialise le processus
+    // Initialise le nouveau processus
     Process* newProcess = mem_alloc(sizeof(Process));
 
+    // Définit la valeur du pid
+    int pid;
     if (nbStartProcess == 0) {
-        newProcess->pid = 1;
+       pid = 1;
     } else {
-        newProcess->pid = processTable[nbStartProcess - 1]->pid + 1;
+        pid = processTable[nbStartProcess - 1]->pid + 1;
     }
 
+    newProcess->pid = pid;
+
+    // Initialise l'état du processus
     newProcess->state = READY;
 
     strcpy(newProcess->name, name);
 
+    // Initialise la priorité du processus
     newProcess->priority = prio;
 
     // [USER] newProcess->executionStack = mem_alloc(sizeof(uint32_t*) * ssize) + @retour + param + autres éléments;
-    newProcess->executionStack[STACK_SIZE - 1] = (uint32_t) pt_func;
-    newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) arg;
+    newProcess->executionStack[STACK_SIZE - 1] = (uint32_t) arg;
+    newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) return_fct;
+    newProcess->executionStack[STACK_SIZE - 3] = (uint32_t) pt_func;
 
-    newProcess->context[ESP] = (uint32_t) & (newProcess->executionStack[STACK_SIZE - 1]);
+    newProcess->context[ESP] = (uint32_t) & (newProcess->executionStack[STACK_SIZE - 3]);
 
+    // Initialisation de la liste des enfants
+    newProcess->children = (link) LIST_HEAD_INIT(newProcess->children);
+    
+    // Initialisation de la liste des enfants zombies
+    newProcess->zombieChildren = (link) LIST_HEAD_INIT(newProcess->zombieChildren);
+
+    // Initialise le père du processus
+    if (nbStartProcess != 0) {
+        Process* daddy = getProcessByPid(getpid());
+        addChildren(daddy, newProcess);
+    } else {
+        newProcess->parent = NULL;
+    }
+
+    // Ajoute le processus dans la table des processus
     processTable[nbStartProcess] = newProcess;
     
-    addProcessToQueue(processTable[nbStartProcess]);
-
+    addProcessToReadyQueue(newProcess);
+    
     nbStartProcess++;
 
-    // Si il est en tête de la queue, il doit être lancer car cela signifie soit :
+    // Si le processus est en tête de file, il doit être lancé car cela signifie soit :
     // - qu'il est le premier processus
     // - qu'il est le processus avec la plus haute priorité
     if (runningProcess == NULL || getHighestPriorityProcess()->pid == newProcess->pid) {
         ordonnance();
     }
 
-    return newProcess->pid;
+    return pid;
 }
 
-/* unsigned int sleep(unsigned int nbSecs) {
+// Permet de mettre fin à un processus donné
+int kill(int pid) {
+    
+    // Récupération du processus dont on connaît le pid
+    Process* process = getProcessByPid(pid);
+    if (process == NULL || process->state == ZOMBIE) {
+        return -1;
+    }
 
-} */
+    process->retval = 0;
 
-int getNbStartProcess() {
-    return nbStartProcess;
+    stopProcess(process);
+    
+    return 0;
+}
+
+void exit(int retval) {
+    // Récupère la valeur de retour
+    runningProcess->retval = retval;
+    stopProcess(runningProcess);
+    // La fonction exit ne termine jamais
+    while(1);
+}
+
+void stopProcess(Process* process) {
+    
+    // Retire le processus des queues d'attentes
+    removeProcessFromWaitQueue(process);
+    removeProcessFromReadyQueue(process);
+    Process* child;
+    // Supprimer tous les enfants zombies
+    
+    while(queue_empty(&(process->children)) == 0) {
+        queue_for_each(child, &(process->children), Process, childQueue) {
+            removeChild(child);
+            if(child->state == ZOMBIE) {
+                deleteProcess(child);
+            }
+            break;
+        }
+    }
+    // Le processus passe dans l'état zombie si son père existe toujours
+    if (process->parent != NULL) {
+        Process* parent = process->parent;
+        switchState(process, ZOMBIE);
+
+
+
+        if (parent->state == BLOCKED_CHILD && (parent->waitChildPid == -1 || parent->waitChildPid == process->pid)) {
+            switchState(parent, READY);
+            addProcessToReadyQueue(parent);
+        }
+    }
+    // sinon il est immédiatement détruit (le pid est libéré)
+    else {
+        // Supprime le processus
+        if (process == runningProcess) {
+            addProcessToDeleteQueue(process);
+        } else {
+            deleteProcess(runningProcess);
+        }
+
+
+    }
+    // Arrête le processus s'il est en cours d'exécution
+    if (runningProcess == process) {
+        ordonnance();
+    }
+}
+
+void deleteProcess(Process* process) {
+    // Retire le processus de la table des processus
+    int i, find = 0;
+
+    for(i = 0; i < nbStartProcess; i++) {
+        if (find == 0) {
+            if(processTable[i] == process) {
+                find = 1;
+            }
+        } else {
+            processTable[i - 1] = processTable[i];
+        }
+    }
+    
+    // Si le processus n'a pas été trouvé
+    if(find == 0) {
+        return;
+    }
+
+    nbStartProcess--;
+
+    // [USER] Free le context (user/mem.h)
+
+    if (process->parent != NULL) {
+        removeZombieChild(process);
+
+        removeChild(process);
+    }
+    mem_free(process, sizeof(Process));
+}
+
+void addProcessToDeleteQueue(Process* process) {
+    queue_add(process, &deleteQueueHead, Process, deleteQueue, pid);
+}
+
+void removeProcessFromDeleteQueue(Process* process) {
+    if (!isDeleteQueueEmpty() && process->deleteQueue.prev != NULL) {
+        queue_del(process, deleteQueue);
+    }
+}
+
+int isDeleteQueueEmpty() {
+    return queue_empty(&deleteQueueHead) != 0;
+}
+
+/*
+    FILIATION
+*/
+void addChildren(Process* parent, Process* child) {
+    queue_add(child, &(parent->children), Process, childQueue, pid);
+    child->parent = parent;
+}
+
+void removeChild(Process* child) {
+    queue_del(child, childQueue);
+    child->parent = NULL;
+}
+/*
+    FILIATION 
+        ZOMBIE
+*/
+void addZombieChildren(Process* parent, Process* child) {
+    queue_add(child, &(parent->zombieChildren), Process, zombieChildQueue, priority);
+}
+
+void removeZombieChild(Process* child) {
+    if (child->parent != NULL && !isZombieChildrenQueueEmpty(child->parent) && child->zombieChildQueue.prev != NULL) {
+        queue_del(child, zombieChildQueue);
+    }
+}
+
+Process* getFirstZombieChild(Process* parent) {
+    return queue_top(&(parent->zombieChildren), Process, zombieChildQueue);
+}
+
+int isZombieChildrenQueueEmpty(Process* parent) {
+    return queue_empty(&(parent->zombieChildren)) != 0;
+}
+/*
+    ATTENTE ACTIVE
+*/
+
+int waitpid(int pid, int *retvalp) {
+    Process* targetProcess;
+
+    runningProcess->waitChildPid = pid;
+
+    if (pid < 0) {
+        if (isZombieChildrenQueueEmpty(runningProcess)) {
+            switchState(runningProcess, BLOCKED_CHILD);
+            ordonnance();
+        }
+        targetProcess = getFirstZombieChild(runningProcess);
+    } else {
+        // Si aucun processus n'a ce PID ou que le processus n'est pas son enfant.
+        targetProcess = getProcessByPid(pid);
+        if (targetProcess == NULL || targetProcess->parent != runningProcess) {
+            return -1;
+        }
+
+        if (targetProcess->state != ZOMBIE) {
+            switchState(runningProcess, BLOCKED_CHILD);
+            ordonnance();
+        }
+    }
+
+    int processPid = targetProcess->pid;
+
+    if (retvalp != NULL) {
+        *retvalp = targetProcess->retval;
+    }
+
+    deleteProcess(targetProcess);
+
+    return processPid;
+}
+
+
+unsigned int sleep(unsigned int nbSecs) {
+    switchState(runningProcess, SLEEP);
+
+    runningProcess->waitTimeout = current_clock() + nbSecs * SCHEDFREQ;
+
+    ordonnance();
+
+    if (runningProcess->isWaiting) {
+        return runningProcess->waitTimeout - ticks;
+    }
+    return 0;
 }
 
