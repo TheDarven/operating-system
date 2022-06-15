@@ -33,13 +33,18 @@ typedef struct Process {
     link zombieChildren; // Tête de queue des fils zombies
 
 
-    link childQueue; // Queue de tous les fils du parent
-    link readyQueue; // Queue des processus ready
+    link childQueue;  // Queue de tous les fils du parent
+    link readyQueue;  // Queue des processus ready
     link deleteQueue; // Queue des processus zombies en attente de suppression
-    link messageQueue; // Queue des messages (producteurs - consommateurs)
     
-    link waitQueue; // Queue des processus sleep
-    unsigned long waitTimeout; // Tick when the process will stop waiting
+    link messageQueue; // Queue des messages (producteurs - consommateurs)
+    bool isWaitProducer;
+    struct MessageFile* messageFile;
+    int message;
+    bool waitMessageFile;
+    
+    link waitQueue;             // Queue des processus sleep
+    unsigned long waitTimeout;  // Tick when the process will stop waiting
     bool isWaiting;
 
     link zombieChildQueue; // Queue des processus zombies
@@ -52,8 +57,6 @@ typedef struct Process {
     uint32_t context[CONTEXT_SIZE];
     uint32_t executionStack[STACK_SIZE]; // [USER] Passer en pointeur pour alloc en user
     int retval;
-
-    bool waitMessageFile;
 } Process;
 
 // Local vars
@@ -93,5 +96,6 @@ Process* getFirstZombieChild(Process* parent);
 // Attente active
 unsigned int sleep(unsigned int nbSecs);
 int waitpid(int pid, int *retvalp);
+//void wait_clock(unsigned long clock);
 
 #endif

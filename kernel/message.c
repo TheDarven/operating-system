@@ -9,7 +9,11 @@ Process* pickConsumer(MessageFile* file) {
 
     file->nbConsumer--;
 
-    return queue_out(&(file->blockedConsumerQueueHead), Process, messageQueue);
+    Process* consumerProcess = queue_out(&(file->blockedConsumerQueueHead), Process, messageQueue);
+
+    consumerProcess->messageFile = NULL;
+
+    return consumerProcess;
 }
 
 Process* pickProducer(MessageFile* file) {
@@ -19,9 +23,30 @@ Process* pickProducer(MessageFile* file) {
 
     file->nbProducer--;
 
-    return queue_out(&(file->blockedProducerQueueHead), Process, messageQueue);
+    Process* producerProcess = queue_out(&(file->blockedProducerQueueHead), Process, messageQueue);
+
+    producerProcess->messageFile = NULL;
+
+    producerProcess->isWaitProducer = false;
+
+    return producerProcess;
 }
 
+void removeFromMessageFile(Process* process) {
+    if (process->messageFile == NULL) {
+        return;
+    }
+    
+    queue_del(process, messageQueue);
+        
+    if (process->isWaitProducer) {
+        process->messageFile->nbProducer--;
+    } else {
+        process->messageFile->nbConsumer--;
+    }
+
+    process->messageFile = NULL;
+}
 
 void addConsumer(MessageFile* file, Process* process) {
     if (file->nbMessage > 0) {
@@ -29,6 +54,10 @@ void addConsumer(MessageFile* file, Process* process) {
     }
     
     process->waitMessageFile = true;
+
+    process->isWaitProducer = false;
+
+    process->messageFile = file;
 
     queue_add(process, &(file->blockedConsumerQueueHead), Process, messageQueue, priority); 
 
@@ -41,6 +70,10 @@ void addProducer(MessageFile* file, Process* process) {
     }
     
     process->waitMessageFile = true;
+
+    process->isWaitProducer = true;
+    
+    process->messageFile = file;
     
     queue_add(process, &(file->blockedProducerQueueHead), Process, messageQueue, priority); 
     
@@ -54,6 +87,8 @@ void removeAllProducer(MessageFile* file) {
         producerProcess->waitMessageFile = false;
 
         switchState(producerProcess, READY);
+
+        addProcessToReadyQueue(producerProcess);
     }
 }
 
@@ -64,6 +99,8 @@ void removeAllConsumer(MessageFile* file) {
         consumerProcess->waitMessageFile = false;
 
         switchState(consumerProcess, READY);
+
+        addProcessToReadyQueue(consumerProcess);
     }
 }
 
@@ -72,10 +109,10 @@ void removeAllConsumer(MessageFile* file) {
 
 int pcreate(int count) {
 
-    if (count < 1) {
+    if (count < 1 || (int) (INT32_MAX / sizeof(int)) <= count) {
         return -1;
     }
-    
+
     int fileIndex = 0;
     for (; fileIndex < NBQUEUE; fileIndex++) {
         if (fileList[fileIndex] == NULL) {
@@ -87,7 +124,16 @@ int pcreate(int count) {
         return -1;
     }
 
+    int* messages = (int*) mem_alloc(sizeof(int) * count);
+    if (!messages) {
+        return -1;
+    }
+
     MessageFile* newMessageFile = (MessageFile*) mem_alloc(sizeof(MessageFile));
+    if (!newMessageFile) {
+        mem_free(messages, sizeof(int) * count);
+        return -1;
+    }
 
     fileList[fileIndex] = newMessageFile;
 
@@ -99,7 +145,7 @@ int pcreate(int count) {
 
     newMessageFile->indexLast = count - 1;
 
-    newMessageFile->messages = (int*) mem_alloc(sizeof(int) * count);
+    newMessageFile->messages = messages;
 
     newMessageFile->blockedProducerQueueHead = (link) LIST_HEAD_INIT(newMessageFile->blockedProducerQueueHead);
     
@@ -126,6 +172,12 @@ int pdelete(int fid) {
 
     mem_free(targetFile, sizeof(MessageFile));
 
+    fileList[fid] = NULL;
+
+    if (runningProcess != getHighestPriorityProcess()) {
+        ordonnance();
+    }
+
     return 0;
 }
 
@@ -145,15 +197,7 @@ int pcount(int fid, int *count) {
     }
 
     if (count != NULL) {
-
-        // Place dans 'count' une valeur négative égale à l'opposé du nombre de processus bloqués sur file vide :
-        if (targetFile->nbConsumer > 0) {
-            *count = - targetFile->nbConsumer;
-        }
-        // Place dans 'count' une valeur positive égale à la somme du nombre de messages dans la file et du nombre de processus bloqués sur file pleine.
-        else {
-            *count = targetFile->nbMessage + targetFile->nbProducer;
-        }
+        *count = targetFile->nbMessage + targetFile->nbProducer - targetFile->nbConsumer;
     }
 
     return 0;
@@ -175,6 +219,8 @@ int psend(int fid, int message) {
 
     // File de message pleine
     if (file->nbMessage == file->nbMaxMessage) {
+        runningProcess->message = message;
+
         addProducer(file, runningProcess);
 
         switchState(runningProcess, BLOCKED_MSG);
@@ -187,19 +233,30 @@ int psend(int fid, int message) {
             // La file a été supprimée
             return -1;
         }
+        return 0;
     }
-
-    file->nbMessage++;
-
-    file->indexLast = (file->indexLast + 1) % file->nbMaxMessage;
-
-    file->messages[file->indexLast] = message;
 
     // Si des processus attendent de consommer un message, on en réveille un
     Process* wakeConsumer = pickConsumer(file);
     if (wakeConsumer != NULL) {
+
+        wakeConsumer->message = message;
+
         switchState(wakeConsumer, READY);
+
+        addProcessToReadyQueue(wakeConsumer);
+    } else {
+        file->nbMessage++;
+
+        file->indexLast = (file->indexLast + 1) % file->nbMaxMessage;
+
+        file->messages[file->indexLast] = message;
     }
+
+    if (runningProcess != getHighestPriorityProcess()) {
+        ordonnance();
+    }
+
     return 0;
 }
 
@@ -231,21 +288,41 @@ int preceive(int fid, int *message) {
         } else {
             return -1; // La file a été supprimée
         }
+
+        if (runningProcess->message != 0) {
+            *message = runningProcess->message;
+        }
+
+        return 0;
     }
 
     // Lecture du message :
-    if (file->messages[file->indexFirst] != 0 && message != NULL) {
+    if (message != NULL) {
         *message = file->messages[file->indexFirst];
     }
 
     // Mise à jour du nombre de messages de la file et du premier index de la file :
     file->indexFirst = (file->indexFirst + 1) % file->nbMaxMessage;
+
     file->nbMessage--;
 
     // Si des processus attendent de produire un message, on en réveille un
     Process* waitProducer = pickProducer(file);
     if (waitProducer != NULL) {
+
+        file->nbMessage++;
+
+        file->indexLast = (file->indexLast + 1) % file->nbMaxMessage;
+
+        file->messages[file->indexLast] = waitProducer->message;
+        
         switchState(waitProducer, READY);
+
+        addProcessToReadyQueue(waitProducer);
+    }
+
+    if (runningProcess != getHighestPriorityProcess()) {
+        ordonnance();
     }
 
     return 0;
@@ -273,6 +350,10 @@ int preset(int fid) {
     removeAllConsumer(file);
 
     removeAllProducer(file);
+
+    if (runningProcess != getHighestPriorityProcess()) {
+        ordonnance();
+    }
 
     return 0;
 }

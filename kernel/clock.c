@@ -11,10 +11,6 @@ unsigned long current_clock() {
     return ticks;
 }
 
-void wait_clock(unsigned long clock) {
-    clock++;
-}
-
 void set_Quartz() {
 
     unsigned long value = QUARTZ / CLOCKFREQ;

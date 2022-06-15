@@ -10,9 +10,16 @@ void tests(void) {
 	hlt();
 	cli();
 	for (int i = 0; i < 19; i++) {
-		if (i == 6 || i == 7) {
+		// Tests qui ne sont pas encore implémentés
+		if (i == 6 || i == 7 || i == 11 || i == 17) {
 			continue;
 		}
+
+		// Test long à skip
+		if (i == 9) {
+			continue;
+		}
+
 		printf("test %d :\n", i);
 		test_run(i);
 	}

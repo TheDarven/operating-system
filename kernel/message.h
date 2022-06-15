@@ -1,7 +1,7 @@
 #ifndef __MESSAGE_H__
 #define __MESSAGE_H__
 
-#define NBQUEUE 64
+#define NBQUEUE 10
 
 #include "scheduler.h"
 
@@ -27,6 +27,8 @@ extern MessageFile* fileList[NBQUEUE];
 Process* pickConsumer(MessageFile* file);
 
 Process* pickProducer(MessageFile* file);
+
+void removeFromMessageFile(Process* process);
 
 void addConsumer(MessageFile* file, Process* process);
 
