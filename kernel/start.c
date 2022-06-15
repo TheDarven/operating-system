@@ -9,8 +9,8 @@ void tests(void) {
 	sti();
 	hlt();
 	cli();
-	for (int i = 1; i < 19; i++) {
-		if (i == 6 && i != 7) {
+	for (int i = 0; i < 19; i++) {
+		if (i == 6 || i == 7) {
 			continue;
 		}
 		printf("test %d :\n", i);

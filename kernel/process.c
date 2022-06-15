@@ -98,6 +98,7 @@ void switchState(Process* process, enum State newState) {
         break;
 
         case BLOCKED_CHILD:
+        case BLOCKED_MSG:
             removeZombieChild(process);
             removeProcessFromReadyQueue(process);
             removeProcessFromWaitQueue(process);

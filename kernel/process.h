@@ -23,7 +23,8 @@ extern enum State {
     BLOCKED_IO, // Bloqué sur un I/O
     BLOCKED_CHILD, // Bloqué en attente d'un fils
     SLEEP, // Endormi
-    ZOMBIE // Zombie
+    ZOMBIE, // Zombie
+    BLOCKED_MSG // Bloqué sur un message
 } State;
 
 typedef struct Process {
@@ -35,6 +36,7 @@ typedef struct Process {
     link childQueue; // Queue de tous les fils du parent
     link readyQueue; // Queue des processus ready
     link deleteQueue; // Queue des processus zombies en attente de suppression
+    link messageQueue; // Queue des messages (producteurs - consommateurs)
     
     link waitQueue; // Queue des processus sleep
     unsigned long waitTimeout; // Tick when the process will stop waiting
@@ -50,6 +52,8 @@ typedef struct Process {
     uint32_t context[CONTEXT_SIZE];
     uint32_t executionStack[STACK_SIZE]; // [USER] Passer en pointeur pour alloc en user
     int retval;
+
+    bool waitMessageFile;
 } Process;
 
 // Local vars
