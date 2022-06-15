@@ -23,7 +23,8 @@ extern enum State {
     BLOCKED_IO, // Bloqué sur un I/O
     BLOCKED_CHILD, // Bloqué en attente d'un fils
     SLEEP, // Endormi
-    ZOMBIE // Zombie
+    ZOMBIE, // Zombie
+    BLOCKED_MSG // Bloqué sur un message
 } State;
 
 typedef struct Process {
@@ -32,12 +33,18 @@ typedef struct Process {
     link zombieChildren; // Tête de queue des fils zombies
 
 
-    link childQueue; // Queue de tous les fils du parent
-    link readyQueue; // Queue des processus ready
+    link childQueue;  // Queue de tous les fils du parent
+    link readyQueue;  // Queue des processus ready
     link deleteQueue; // Queue des processus zombies en attente de suppression
     
-    link waitQueue; // Queue des processus sleep
-    unsigned long waitTimeout; // Tick when the process will stop waiting
+    link messageQueue; // Queue des messages (producteurs - consommateurs)
+    bool isWaitProducer;
+    struct MessageFile* messageFile;
+    int message;
+    bool waitMessageFile;
+    
+    link waitQueue;             // Queue des processus sleep
+    unsigned long waitTimeout;  // Tick when the process will stop waiting
     bool isWaiting;
 
     link zombieChildQueue; // Queue des processus zombies
@@ -89,5 +96,6 @@ Process* getFirstZombieChild(Process* parent);
 // Attente active
 unsigned int sleep(unsigned int nbSecs);
 int waitpid(int pid, int *retvalp);
+//void wait_clock(unsigned long clock);
 
 #endif

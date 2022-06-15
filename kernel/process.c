@@ -1,5 +1,6 @@
 #include "process.h"
 #include "scheduler.h"
+#include "message.h"
 
 /* 
     LOCAL VARS
@@ -70,8 +71,21 @@ int chprio(int pid, int newprio) {
     // Changement de la priorité du processus
     process->priority = newprio;
 
-    removeProcessFromReadyQueue(process);
-    addProcessToReadyQueue(process);
+    if (process->state == READY || process->state == RUNNING) {
+        removeProcessFromReadyQueue(process);
+        addProcessToReadyQueue(process);
+    }
+
+    if (process->state == BLOCKED_MSG && process->messageFile != NULL) {
+        queue_del(process, messageQueue);
+        if (process->isWaitProducer) {
+            queue_add(process, &(process->messageFile->blockedProducerQueueHead), Process, messageQueue, priority); 
+        } else {
+            queue_add(process, &(process->messageFile->blockedConsumerQueueHead), Process, messageQueue, priority); 
+        }
+    }
+
+
 
     // Met à jour l'ordonnancement des processus
     // Si il est en tête de la queue, il doit être lancer car cela signifie soit :
@@ -98,6 +112,7 @@ void switchState(Process* process, enum State newState) {
         break;
 
         case BLOCKED_CHILD:
+        case BLOCKED_MSG:
             removeZombieChild(process);
             removeProcessFromReadyQueue(process);
             removeProcessFromWaitQueue(process);
@@ -155,6 +170,10 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
     // Initialise le nouveau processus
     Process* newProcess = mem_alloc(sizeof(Process));
 
+    if (!newProcess) {
+        return -1;
+    }
+
     // Définit la valeur du pid
     int pid;
     if (nbStartProcess == 0) {
@@ -174,6 +193,7 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
     newProcess->priority = prio;
 
     // [USER] newProcess->executionStack = mem_alloc(sizeof(uint32_t*) * ssize) + @retour + param + autres éléments;
+    // [USER] Verif l'alloc
     newProcess->executionStack[STACK_SIZE - 1] = (uint32_t) arg;
     newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) return_fct;
     newProcess->executionStack[STACK_SIZE - 3] = (uint32_t) pt_func;
@@ -240,7 +260,9 @@ void stopProcess(Process* process) {
     // Retire le processus des queues d'attentes
     removeProcessFromWaitQueue(process);
     removeProcessFromReadyQueue(process);
+    removeFromMessageFile(process);
     Process* child;
+
     // Supprimer tous les enfants zombies
     
     while(queue_empty(&(process->children)) == 0) {
@@ -400,6 +422,7 @@ int waitpid(int pid, int *retvalp) {
 
 
 unsigned int sleep(unsigned int nbSecs) {
+
     switchState(runningProcess, SLEEP);
 
     runningProcess->waitTimeout = current_clock() + nbSecs * SCHEDFREQ;
@@ -409,6 +432,17 @@ unsigned int sleep(unsigned int nbSecs) {
     if (runningProcess->isWaiting) {
         return runningProcess->waitTimeout - ticks;
     }
+
     return 0;
 }
+
+
+// Attente temporisée
+/*void wait_clock(unsigned long clock) {
+
+    int sleep_result = sleep(clock);
+    if(sleep_result == 0) => le processus s'exécute, puis se rendort
+    else => le processus continue de dormir
+    
+}*/
 

@@ -126,15 +126,15 @@ void exit(int retval);
 int getpid(void);
 int getprio(int pid);
 int kill(int pid);
-int pcount(int fid, int *count){(void)fid, (void)count; return 0;};
-int pcreate(int count){(void)count; return 0;};
-int pdelete(int fid){(void)fid; return 0;};
-int preceive(int fid,int *message){(void)fid, (void)message; return 0;};
-int preset(int fid){(void)fid; return 0;};
-int psend(int fid, int message){(void)fid, (void)message; return 0;};
+int pcount(int fid, int *count);
+int pcreate(int count);
+int pdelete(int fid);
+int preceive(int fid,int *message);
+int preset(int fid);
+int psend(int fid, int message);
 void clock_settings(unsigned long *quartz, unsigned long *ticks);
 unsigned long current_clock(void);
-void wait_clock(unsigned long wakeup);
+void wait_clock(unsigned long wakeup){(void)wakeup;};
 int start(int (*ptfunc)(void *), unsigned long ssize, int prio, const char *name, void *arg);
 int waitpid(int pid, int *retval);
 
@@ -1827,7 +1827,6 @@ test13(void)
 	int pid1, pid2, pid3;
 	int fid = pcreate(3);
 	int i, msg;
-
 	printf("1");
 	assert(getprio(getpid()) == 128);
 	assert(fid >= 0);
