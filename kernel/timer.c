@@ -28,9 +28,10 @@ void timer_traitement(void) {
     shouldCheck = true;
 
     while (shouldCheck == true && !isWaitQueueEmpty()) {
-        queue_for_each_prev(sleepProcess, &waitQueueHead, Process, waitQueue) {
-            if (sleepProcess->waitTimeout == ticks) {
+        queue_for_each(sleepProcess, &waitQueueHead, Process, waitQueue) {
+            if (sleepProcess->waitTimeout <= ticks) {
                 switchState(sleepProcess, READY);
+                addProcessToReadyQueue(sleepProcess);
                 if (getHighestPriorityProcess() == sleepProcess) {
                     shouldOrdonnance = true;
                 }

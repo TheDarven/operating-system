@@ -1,6 +1,7 @@
 #include "process.h"
 #include "scheduler.h"
 #include "message.h"
+#include "clock.h"
 
 /* 
     LOCAL VARS
@@ -113,25 +114,21 @@ void switchState(Process* process, enum State newState) {
 
         case BLOCKED_CHILD:
         case BLOCKED_MSG:
-            removeZombieChild(process);
             removeProcessFromReadyQueue(process);
             removeProcessFromWaitQueue(process);
         break;
 
         case SLEEP:
-            removeZombieChild(process);
             removeProcessFromReadyQueue(process);
             addProcessToWaitQueue(process);
         break;
 
         case RUNNING:
-            removeZombieChild(process);
             addProcessToReadyQueue(process);
             removeProcessFromWaitQueue(process);
         break;
         
         case READY:
-            removeZombieChild(process);
             removeProcessFromWaitQueue(process);
         break;
 
@@ -420,29 +417,21 @@ int waitpid(int pid, int *retvalp) {
     return processPid;
 }
 
-
 unsigned int sleep(unsigned int nbSecs) {
 
+    // Défini la date à laquelle le processus se réveillera
+    runningProcess->waitTimeout = current_clock() + nbSecs * CLOCKFREQ;
+
+    // Le processus passe à l'état endormi
     switchState(runningProcess, SLEEP);
 
-    runningProcess->waitTimeout = current_clock() + nbSecs * SCHEDFREQ;
-
+    // Recherche un nouveau processus à passer en mode running
     ordonnance();
 
-    if (runningProcess->isWaiting) {
+    // Retourne le temps restant à dormir
+    if (runningProcess->state == SLEEP) {
         return runningProcess->waitTimeout - ticks;
     }
 
     return 0;
 }
-
-
-// Attente temporisée
-/*void wait_clock(unsigned long clock) {
-
-    int sleep_result = sleep(clock);
-    if(sleep_result == 0) => le processus s'exécute, puis se rendort
-    else => le processus continue de dormir
-    
-}*/
-

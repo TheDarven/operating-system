@@ -5,7 +5,6 @@
 #include "../shared/queue.h"
 #include "../shared/string.h"
 #include "mem.h"
-#include "clock.h"
 #include "../shared/stdbool.h"
 
 #define MAXPRIO 256
@@ -45,7 +44,6 @@ typedef struct Process {
     
     link waitQueue;             // Queue des processus sleep
     unsigned long waitTimeout;  // Tick when the process will stop waiting
-    bool isWaiting;
 
     link zombieChildQueue; // Queue des processus zombies
     int waitChildPid;
@@ -96,6 +94,5 @@ Process* getFirstZombieChild(Process* parent);
 // Attente active
 unsigned int sleep(unsigned int nbSecs);
 int waitpid(int pid, int *retvalp);
-//void wait_clock(unsigned long clock);
 
 #endif

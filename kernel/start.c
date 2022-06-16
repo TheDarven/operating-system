@@ -11,7 +11,7 @@ void tests(void) {
 	cli();
 	for (int i = 0; i < 19; i++) {
 		// Tests qui ne sont pas encore implémentés
-		if (i == 6 || i == 7 || i == 11 || i == 17) {
+		if (i == 6 || i == 11 || i == 17) {
 			continue;
 		}
 
@@ -28,13 +28,28 @@ void tests(void) {
 }
 
 
+void testSleep(void) {
+	printf("Je vais m'endormir zzzZZZ");
+	sleep(5);
+	printf("Je me réveille HAHAHAHA");
+}
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+
 void idle(void) {
-	sti();
-	for (unsigned long i = 0; i < 429496750; i++) {}
-	cli();
-	printf("%d : a - %d\n", getpid(), getNbStartProcess());
 	start((int (*)(void *)) tests, 4000, 128, "tests", NULL);
 
+	// start((int (*)(void *)) testSleep, 4000, 128, "testSleep", NULL);
+
+	while (1) {
+		sti();
+		hlt();
+		cli();
+	}
 }
 
 
@@ -55,9 +70,11 @@ void kernel_start(void) {
 	init_all_traitants();
 
 	printf("test kernel \n");
+
 	int pid = start((int (*)(void *)) idle, 4000, 1, "idle", NULL);
-	printf("idle pid : %d \n", pid);
+
 	idle();
+
 	while (1) {	
 		hlt();
 	}
