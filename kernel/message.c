@@ -87,8 +87,6 @@ void removeAllProducer(MessageFile* file) {
         producerProcess->waitMessageFile = false;
 
         switchState(producerProcess, READY);
-
-        addProcessToReadyQueue(producerProcess);
     }
 }
 
@@ -99,8 +97,6 @@ void removeAllConsumer(MessageFile* file) {
         consumerProcess->waitMessageFile = false;
 
         switchState(consumerProcess, READY);
-
-        addProcessToReadyQueue(consumerProcess);
     }
 }
 
@@ -244,7 +240,6 @@ int psend(int fid, int message) {
 
         switchState(wakeConsumer, READY);
 
-        addProcessToReadyQueue(wakeConsumer);
     } else {
         file->nbMessage++;
 
@@ -318,7 +313,6 @@ int preceive(int fid, int *message) {
         
         switchState(waitProducer, READY);
 
-        addProcessToReadyQueue(waitProducer);
     }
 
     if (runningProcess != getHighestPriorityProcess()) {

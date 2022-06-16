@@ -1,10 +1,16 @@
 #include "clock.h"
+#include "process.h"
+#include "scheduler.h"
 
 unsigned long ticks = 0;
 
 void clock_settings(unsigned long *quartz, unsigned long *ticks) {
-    *quartz = QUARTZ;
-    *ticks = (QUARTZ / CLOCKFREQ);
+    if (quartz != NULL) {
+        *quartz = QUARTZ;
+    }
+    if (ticks != NULL) {
+        *ticks = (QUARTZ / CLOCKFREQ);
+    }
 }
 
 unsigned long current_clock() {
@@ -28,3 +34,10 @@ void set_Quartz() {
     
 }
 
+void wait_clock(unsigned long clock) {
+    runningProcess->waitTimeout = clock;
+
+    switchState(runningProcess, SLEEP);
+
+    ordonnance();
+}

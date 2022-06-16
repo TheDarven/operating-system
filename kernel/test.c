@@ -134,7 +134,7 @@ int preset(int fid);
 int psend(int fid, int message);
 void clock_settings(unsigned long *quartz, unsigned long *ticks);
 unsigned long current_clock(void);
-void wait_clock(unsigned long wakeup){(void)wakeup;};
+void wait_clock(unsigned long wakeup);
 int start(int (*ptfunc)(void *), unsigned long ssize, int prio, const char *name, void *arg);
 int waitpid(int pid, int *retval);
 
