@@ -129,6 +129,7 @@ void switchState(Process* process, enum State newState) {
         break;
         
         case READY:
+            addProcessToReadyQueue(process);
             removeProcessFromWaitQueue(process);
         break;
 
@@ -280,7 +281,6 @@ void stopProcess(Process* process) {
 
         if (parent->state == BLOCKED_CHILD && (parent->waitChildPid == -1 || parent->waitChildPid == process->pid)) {
             switchState(parent, READY);
-            addProcessToReadyQueue(parent);
         }
     }
     // sinon il est immédiatement détruit (le pid est libéré)

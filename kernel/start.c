@@ -71,7 +71,7 @@ void kernel_start(void) {
 
 	printf("test kernel \n");
 
-	int pid = start((int (*)(void *)) idle, 4000, 1, "idle", NULL);
+	start((int (*)(void *)) idle, 4000, 1, "idle", NULL);
 
 	idle();
 

@@ -31,7 +31,7 @@ void timer_traitement(void) {
         queue_for_each(sleepProcess, &waitQueueHead, Process, waitQueue) {
             if (sleepProcess->waitTimeout <= ticks) {
                 switchState(sleepProcess, READY);
-                addProcessToReadyQueue(sleepProcess);
+
                 if (getHighestPriorityProcess() == sleepProcess) {
                     shouldOrdonnance = true;
                 }

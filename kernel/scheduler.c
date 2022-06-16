@@ -40,7 +40,10 @@ void ordonnance(void) {
 }
 
 void addProcessToReadyQueue(Process* process) {
-    queue_add(process, &processQueue, Process, readyQueue, priority);
+    if (process->readyQueue.next == NULL) {
+        // Insère si il n'est pas dans la liste
+        queue_add(process, &processQueue, Process, readyQueue, priority);
+    }
 }
 
 void removeProcessFromReadyQueue(Process* process) {
