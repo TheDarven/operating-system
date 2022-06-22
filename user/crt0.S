@@ -25,6 +25,10 @@
 entry:
 	/* Call the first user process */
 	jmp	user_start
+# On passe le registre contenant la valeur de retour en paramètre de exit()
+user_exit:
+    pushl %eax
+    call exit
 
 /* Unimplemented functions.
 You have to implement them it in ".c" files. As these symbols are marked as
@@ -41,16 +45,8 @@ X##:\
 	ret
 
 UNIMPLEMENTED(console_putbytes)
-	
 UNIMPLEMENTED(cons_write)
 UNIMPLEMENTED(cons_read)
-UNIMPLEMENTED(exit)
-UNIMPLEMENTED(start)
-UNIMPLEMENTED(waitpid)
-UNIMPLEMENTED(kill)
-UNIMPLEMENTED(getpid)
-UNIMPLEMENTED(getprio)
-UNIMPLEMENTED(chprio)
 UNIMPLEMENTED(screate)
 UNIMPLEMENTED(scount)
 UNIMPLEMENTED(signal)
@@ -60,15 +56,6 @@ UNIMPLEMENTED(sreset)
 UNIMPLEMENTED(sdelete)
 UNIMPLEMENTED(try_wait)
 UNIMPLEMENTED(sys_info)
-UNIMPLEMENTED(pcreate)
-UNIMPLEMENTED(psend)
-UNIMPLEMENTED(pdelete)
-UNIMPLEMENTED(pcount)
-UNIMPLEMENTED(preceive)
-UNIMPLEMENTED(preset)
-UNIMPLEMENTED(clock_settings)
-UNIMPLEMENTED(wait_clock)
-UNIMPLEMENTED(current_clock)
 UNIMPLEMENTED(cons_echo)
 
 

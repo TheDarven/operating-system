@@ -2,6 +2,8 @@
 #include "scheduler.h"
 #include "message.h"
 #include "clock.h"
+#include "user_stack_mem.h"
+#include "segment.h"
 
 /* 
     LOCAL VARS
@@ -150,15 +152,14 @@ void switchState(Process* process, enum State newState) {
     PROCESS LIFECYLE
 */
 
+
+// Initialisation d'un nouveau processus :
 int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name, void *arg) {
-    ssize++; // [USER] Supprimer cette ligne
     
     // Si le paramètre 'prio' est incorrect
     if (prio < 1 || prio > MAXPRIO) {
         return -1;
     }
-
-    // [USER] Verifier ssize correct (STACK_SIZE < sizeof(uint32_t*) * ssize) ?
 
     // Si plus de place dans la table des processus
     if (nbStartProcess == NBPROC) {
@@ -167,7 +168,6 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
 
     // Initialise le nouveau processus
     Process* newProcess = mem_alloc(sizeof(Process));
-
     if (!newProcess) {
         return -1;
     }
@@ -175,11 +175,10 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
     // Définit la valeur du pid
     int pid;
     if (nbStartProcess == 0) {
-       pid = 1;
+       pid = FIRST_PID;
     } else {
         pid = processTable[nbStartProcess - 1]->pid + 1;
     }
-
     newProcess->pid = pid;
 
     // Initialise l'état du processus
@@ -190,13 +189,43 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
     // Initialise la priorité du processus
     newProcess->priority = prio;
 
-    // [USER] newProcess->executionStack = mem_alloc(sizeof(uint32_t*) * ssize) + @retour + param + autres éléments;
-    // [USER] Verif l'alloc
-    newProcess->executionStack[STACK_SIZE - 1] = (uint32_t) arg;
-    newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) return_fct;
-    newProcess->executionStack[STACK_SIZE - 3] = (uint32_t) pt_func;
+    // Construit la pile d'exécution user
+    if (pid == FIRST_PID) {
+        // Si processus principal
+        newProcess->executionStack[STACK_SIZE - 4] = (uint32_t) arg;
+        newProcess->executionStack[STACK_SIZE - 5] = (uint32_t) return_fct;
+        newProcess->executionStack[STACK_SIZE - 6] = (uint32_t) pt_func;
 
-    newProcess->context[ESP] = (uint32_t) & (newProcess->executionStack[STACK_SIZE - 3]);
+        // Context
+        newProcess->context[ESP] = (uint32_t) & (newProcess->executionStack[STACK_SIZE - 6]);
+    } else {
+        // Sinon processus user
+        newProcess->userStack = user_stack_alloc(sizeof(uint32_t*) * (ssize + NB_ARGS_USER_STACK));
+        if (newProcess->userStack == NULL) {
+            user_stack_free(newProcess->userStack, sizeof(Process));
+            return -1;
+        }
+
+        newProcess->ssize = ssize;
+
+        newProcess->userStack[ssize + NB_ARGS_USER_STACK - 2] = (uint32_t) user_exit;
+        newProcess->userStack[ssize + NB_ARGS_USER_STACK - 1] = (uint32_t) arg;
+
+        newProcess->executionStack[STACK_SIZE - 1] = USER_DS;
+        newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) &(newProcess->userStack);
+        newProcess->executionStack[STACK_SIZE - 3] = 0x202;
+        newProcess->executionStack[STACK_SIZE - 4] = USER_CS;
+        newProcess->executionStack[STACK_SIZE - 5] = (uint32_t) pt_func;
+        newProcess->executionStack[STACK_SIZE - 6] = (uint32_t) switch_user_mode;
+
+        // USER DS dans ax
+        // ss dans bx, cx, dx, ex
+
+        // Context
+        newProcess->context[ESP] = (uint32_t) & (newProcess->executionStack[STACK_SIZE - 6]);
+        newProcess->context[TSS] = (uint32_t) & (newProcess->executionStack[STACK_SIZE - 5]);
+    }
+
 
     // Initialisation de la liste des enfants
     newProcess->children = (link) LIST_HEAD_INIT(newProcess->children);
@@ -321,7 +350,10 @@ void deleteProcess(Process* process) {
 
     nbStartProcess--;
 
-    // [USER] Free le context (user/mem.h)
+    if (process->pid != FIRST_PID) {
+        // Si processus user
+        user_stack_free(process->userStack, sizeof(uint32_t*) * (process->ssize + NB_ARGS_USER_STACK));
+    }
 
     if (process->parent != NULL) {
         removeZombieChild(process);

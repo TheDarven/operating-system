@@ -9,8 +9,10 @@
 // Traitants
 void traitant_IT_32();
 
+void traitant_IT_49();
+
 // Init traitants
-void init_traitant_IT(void (*traitant)(void), unsigned int index);
+void init_traitant_IT(void (*traitant)(void), unsigned int index, unsigned int dpl);
 
 void init_all_traitants();
 
