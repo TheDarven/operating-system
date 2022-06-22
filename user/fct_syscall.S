@@ -4,13 +4,12 @@
 fct_syscall:
     # Sauvegarde des registres user
     pushl %ebp
-    mov %esp, %ebp
+    movl %esp, %ebp
     pushl %esi
     pushl %edi
     pushl %edx
     pushl %ecx
     pushl %ebx
-    pushl %eax
     # Passage des paramètres dans les registres
     movl 8(%ebp), %eax
     movl 12(%ebp), %ebx
@@ -21,7 +20,6 @@ fct_syscall:
     # Trigger de l'interruption
     int $49
     # Restauration des registres
-    popl %ebx
     popl %ebx
     popl %ecx
     popl %edx

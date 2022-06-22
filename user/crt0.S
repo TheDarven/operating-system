@@ -44,7 +44,6 @@ user_start:
 X##:\
 	ret
 
-UNIMPLEMENTED(console_putbytes)
 UNIMPLEMENTED(cons_write)
 UNIMPLEMENTED(cons_read)
 UNIMPLEMENTED(screate)

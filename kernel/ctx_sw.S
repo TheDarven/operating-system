@@ -11,8 +11,6 @@ ctx_sw:
     movl %esi, 12(%eax)
     movl %edi, 16(%eax)
     
-    movl tss+4, %ebx
-    movl %ebx, 20(%eax)
     # restauration du contexte du nouveau processus
     movl 8(%esp), %eax
     movl (%eax), %ebx

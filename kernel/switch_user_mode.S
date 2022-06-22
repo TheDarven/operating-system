@@ -8,4 +8,4 @@ switch_user_mode:
     mov %bx, %es
     mov %bx, %fs
     mov %bx, %gs
-    ret
+    iret

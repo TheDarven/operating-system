@@ -9,11 +9,11 @@
 
 #define MAXPRIO 256
 #define MAX_NAME_LENGTH 256
-#define STACK_SIZE 256
+#define STACK_SIZE 2500
 #define NBPROC 1000
 #define FIRST_PID 1
 
-#define NB_ARGS_USER_STACK 2
+#define NB_ARGS_USER_STACK 16
 /*
 - EXIT_FCT
 - ARG
@@ -66,7 +66,7 @@ typedef struct Process {
     char name[MAX_NAME_LENGTH];
     uint32_t context[CONTEXT_SIZE];
     uint32_t executionStack[STACK_SIZE]; 
-    uint32_t* userStack;
+    void* userStack;
     int retval;
 
     unsigned long ssize;
