@@ -1,3 +1,6 @@
+#ifndef __TRAITANT_H__
+#define __TRAITANT_H__
+
 #include "segment.h"
 #include "../shared/stdint.h"
 #include "timer.h"
@@ -9,6 +12,8 @@
 // Traitants
 void traitant_IT_32();
 
+void traitant_IT_33();
+
 void traitant_IT_49();
 
 // Init traitants
@@ -17,3 +22,5 @@ void init_traitant_IT(void (*traitant)(void), unsigned int index, unsigned int d
 void init_all_traitants();
 
 void masque_IRQ(uint32_t num_IRQ, int masque);
+
+#endif

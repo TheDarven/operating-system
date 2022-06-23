@@ -49,8 +49,9 @@ int sys_call(int numTraitant, int arg1, int arg2, int arg3, int arg4, int arg5) 
             cons_write((char *)arg1, (long)arg2);
             return 0;
 
-        /* case TRAITANT_CONS_ECHO:
-            return cons_echo(arg1); */
+        case TRAITANT_CONS_ECHO:
+            cons_echo(arg1);
+            return 0;
         
         case TRAITANT_CONS_READ:
             if (!isPointerParameterValid(arg1)) {

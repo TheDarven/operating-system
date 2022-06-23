@@ -12,6 +12,7 @@ void init_traitant_IT(void (*traitant)(void), unsigned int index, unsigned int d
 
 void init_all_traitants() {
     init_traitant_IT(traitant_IT_32, 32, 0);
+    init_traitant_IT(traitant_IT_33, 33, 0);
     init_traitant_IT(traitant_IT_49, 49, 3);
 }
 

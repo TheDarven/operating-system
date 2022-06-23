@@ -47,4 +47,6 @@ int start(int (*ptfunc)(void *), unsigned long ssize, int prio, const char *name
 
 int waitpid(int pid, int *retval);
 
+void cons_echo(int on);
+
 #endif
