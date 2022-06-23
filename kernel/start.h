@@ -1,11 +1,6 @@
 #ifndef __START_H__
 #define __START_H__
 
-/*#include "../shared/stdint.h"
-#include "../shared/stdio.h"
-#include "string.h"
-// #include "unistd.h"
-*/
 #define FIRST_STACK_SIZE 16384
 
 #ifndef ASSEMBLER
