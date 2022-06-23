@@ -22,6 +22,10 @@
 #ifndef __KBD_H__
 #define __KBD_H__
 
+extern int fid;
+
+#define FILE_SIZE 256
+
 /* Call this function for each scancode received to translate them to
 characters. */
 void do_scancode(int scancode);
@@ -33,5 +37,7 @@ void keyboard_data(char *str);
 /* You may implement this function to keep keyboard LEDs in sync with the
 state of the keyboard driver (do_scancode). */
 void kbd_leds(unsigned char leds);
+
+void initFileMessage();
 
 #endif

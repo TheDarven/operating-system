@@ -1,9 +1,13 @@
 #include "screen.h"
 
+#include "message.h"
+
 uint32_t cursorRow = 0;
 uint32_t cursorCol = 0;
 uint8_t colorBackground = 0;
 uint8_t colorText = 15;
+
+bool isEchoEnable = true;
 
 // Retourne la case mémoire associée à une position de l'écran
 uint16_t *ptr_mem(uint32_t lig, uint32_t col) {
@@ -93,6 +97,12 @@ void traiter_car(char c) {
                 place_curseur(cursorRow, newCol);
             }
             break;
+        default:
+            ecrit_car(cursorRow, cursorCol, '^', colorBackground, colorText);
+            avancer_curseur();
+            ecrit_car(cursorRow, cursorCol, (char) (64 + c), colorBackground, colorText);
+            avancer_curseur();
+            break;
     }
 }
 
@@ -130,13 +140,46 @@ void cons_write(const char *str, long size) {
 }
 
 int cons_read(char *string, unsigned long length) {
+
+
+    // Si length est nul, cette fonction retourne 0. Sinon, elle attend que l'utilisateur ait tapé
+    // une ligne complète terminée par le caractère 13 puis transfère dans le tableau string soit la ligne entière
+    // (caractère 13 non compris), si sa longueur est strictement inférieure à length, soit les length premiers caractères
+    // de la ligne. Finalement, la fonction retourne à l'appelant le nombre de caractères effectivement transmis.
+    // Les caractères frappés et non prélevés restent dans le tampon associé au clavier et seront prélevés aux appels suivants.
+    // Le caractère de fin de ligne (13) n'est jamais transmis à l'appelant&nbsp.
+
+    // Lorsque length est exactement égal au nombre de caractères frappés, fin de ligne non comprise,
+    // le marqueur de fin de ligne reste dans le tampon. Le prochain appel récupèrera une ligne vide.
+
+
+
+    // Si length est nul, cette fonction retourne 0.
     if (length == 0) {
         return 0;
     }
 
-    string++;
+    int message;
+    unsigned long iterator = 0;
 
-    // TODO
+    while (iterator < length) {
 
-    return 0;
+        preceive(fid, &message);
+
+        char c = (char) message;
+        if (c == '\r') {
+            break;
+        } else {
+            string[iterator] = c;
+        }
+
+        iterator++;
+    }
+
+    return iterator;
+}
+
+
+void cons_echo(int on) {
+    isEchoEnable = on;
 }

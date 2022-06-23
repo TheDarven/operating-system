@@ -3,7 +3,7 @@
 #include "traitant.h"
 #include "../shared/string.h"
 #include "../user/start.h"
-
+#include "kbd.h"
 
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -19,25 +19,21 @@ void idle(void) {
 	}
 }
 
-
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 void kernel_start(void) {
 	
 	efface_ecran();
 
-	masque_IRQ(0, 0);
-
 	set_Quartz();
 
 	init_all_traitants();
 
-	printf("test kernel \n");
+	masque_IRQ(0, 0);
+
+	masque_IRQ(1, 0);
+
+	initFileMessage();
 
 	start((int (*)(void *)) idle, 4000, 1, "idle", NULL);
 

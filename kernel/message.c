@@ -351,3 +351,29 @@ int preset(int fid) {
 
     return 0;
 }
+
+int deleteLastChar(int fid) {
+    // Si la valeur de fid n'est pas appropriée
+    if (fid < 0 || fid >= NBQUEUE) {
+        return -1;
+    }
+
+    // Récupère la file de messages :
+    MessageFile* file = fileList[fid];
+    if (file == NULL) {
+        return -1;
+    }
+
+    if (file->nbMessage == 0) {
+        return -1;
+    }
+
+    file->nbMessage--;
+    
+    file->indexLast--;
+    if (file->indexLast < 0) {
+        file->indexFirst = file->nbMaxMessage - 1;
+    }
+
+    return 0;
+}
