@@ -2457,7 +2457,7 @@ test19(void)
 	assert(pid4 > 0);
 	printf("1");
 	param = 4;
-	while (param > 0) {
+while (param > 0) {
 		unsigned long long t1, t2;
 		int msg = 0;
 		printf(".");

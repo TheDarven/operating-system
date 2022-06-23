@@ -52,4 +52,6 @@ int preceive(int fid, int *message);
 
 int preset(int fid);
 
+int deleteLastChar(int fid);
+
 #endif
