@@ -9,11 +9,17 @@
 
 #define MAXPRIO 256
 #define MAX_NAME_LENGTH 256
-#define STACK_SIZE 256
+#define STACK_SIZE 2048
 #define NBPROC 1000
+#define FIRST_PID 1
 
-#define CONTEXT_SIZE 5
+#define NB_ARGS_USER_STACK 128
+
+#define MAX_USER_STACK_SIZE 256000000
+
+#define CONTEXT_SIZE 6
 #define ESP 1
+#define TSS 5
 
 extern enum State {
     RUNNING, // Elu
@@ -53,8 +59,11 @@ typedef struct Process {
     enum State state;
     char name[MAX_NAME_LENGTH];
     uint32_t context[CONTEXT_SIZE];
-    uint32_t executionStack[STACK_SIZE]; // [USER] Passer en pointeur pour alloc en user
+    uint32_t executionStack[STACK_SIZE]; 
+    uint32_t* userStack;
     int retval;
+
+    unsigned long ssize;
 } Process;
 
 // Local vars
@@ -94,5 +103,10 @@ Process* getFirstZombieChild(Process* parent);
 // Attente active
 unsigned int sleep(unsigned int nbSecs);
 int waitpid(int pid, int *retvalp);
+
+// Mode utilisateur
+int switch_user_mode();
+
+void user_exit();
 
 #endif
