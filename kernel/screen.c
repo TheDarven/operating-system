@@ -124,3 +124,19 @@ void console_putbytes(const char *chaine, int32_t taille) {
         traiter_car(chaine[i]);
     }
 }
+
+void cons_write(const char *str, long size) {
+    console_putbytes(str, size);
+}
+
+int cons_read(char *string, unsigned long length) {
+    if (length == 0) {
+        return 0;
+    }
+
+    string++;
+
+    // TODO
+
+    return 0;
+}

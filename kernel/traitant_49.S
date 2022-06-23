@@ -3,8 +3,8 @@
 # debut du traitant 
 traitant_IT_49:
 # Passage des paramètres
-    pushl %esi
     pushl %edi
+    pushl %esi
     pushl %edx
     pushl %ecx
     pushl %ebx
@@ -28,7 +28,7 @@ traitant_IT_49:
     popl %ebx
     popl %ecx
     popl %edx
-    popl %edi
     popl %esi
+    popl %edi
 # fin du traitant et retour de la valeur de retour du syscall
     iret

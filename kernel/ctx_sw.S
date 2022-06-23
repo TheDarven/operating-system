@@ -19,7 +19,7 @@ ctx_sw:
     movl 12(%eax), %esi
     movl 16(%eax), %edi
 
-    movl 20(%eax), %ebx
-    movl %ebx, tss+4
+    movl 20(%eax), %ecx
+    movl %ecx, tss+4
     # on passe la main au nouveau processus
     ret

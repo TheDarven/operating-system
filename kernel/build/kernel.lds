@@ -80,7 +80,6 @@ SECTIONS {
 
 	/* Beginning of user space. User program is loaded here by the kernel */
 	user_start = mem_heap_end;
-	user_exit = mem_heap_end + 5;
 	
 	/* Heap for the kernel to allocate user stacks */
 	user_stack_heap = 0x2800000;

@@ -119,6 +119,7 @@ typedef __gnuc_va_list va_list;
 
 // Prototype des appels systeme de la spec
 int chprio(int pid, int newprio);
+void console_putbytes(const char *chaine, int taille);
 void cons_write(const char *str, unsigned long size);
 int cons_read(char *str, unsigned long size);
 void cons_echo(int on);

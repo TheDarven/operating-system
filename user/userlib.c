@@ -71,3 +71,6 @@ int waitpid(int pid, int *retval) {
     return fct_syscall(TRAITANT_WAITPID, pid, (int) retval, 0, 0, 0);
 }
 
+int cons_write(const char *str, long size) {
+    return fct_syscall(TRAITANT_CONS_WRITE, (int) str, (int)size, 0, 0, 0);
+}

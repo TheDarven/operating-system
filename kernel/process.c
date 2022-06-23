@@ -166,6 +166,10 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
         return -1;
     }
 
+    if (ssize > MAX_USER_STACK_SIZE) {
+        return -1;
+    }
+
     // Initialise le nouveau processus
     Process* newProcess = mem_alloc(sizeof(Process));
     if (!newProcess) {
@@ -200,19 +204,33 @@ int start(int (*pt_func)(void*), unsigned long ssize, int prio, const char *name
         newProcess->context[ESP] = (uint32_t) & (newProcess->executionStack[STACK_SIZE - 6]);
     } else {
         // Sinon processus user
-        newProcess->userStack = user_stack_alloc(sizeof(uint32_t*) * (ssize + NB_ARGS_USER_STACK));
+        /* newProcess->ssize = ssize + sizeof(uint32_t) * NB_ARGS_USER_STACK;
+
+        newProcess->userStack = user_stack_alloc(newProcess->ssize);
         if (newProcess->userStack == NULL) {
-            user_stack_free(newProcess->userStack, sizeof(Process));
+            mem_free(newProcess, sizeof(Process));
             return -1;
         }
 
-        newProcess->ssize = ssize;
+        uint32_t * userExit = (uint32_t *) (newProcess->userStack + newProcess->ssize - 2 * sizeof(uint32_t));
 
-        newProcess->userStack[ssize + NB_ARGS_USER_STACK - 2] = (uint32_t) user_exit;
+        *userExit = (uint32_t) 0x1000005;
+        *(userExit + 1) = (uint32_t) arg; */
+
+        newProcess->ssize = (ssize + NB_ARGS_USER_STACK) * sizeof(uint32_t);
+
+        newProcess->userStack = user_stack_alloc(newProcess->ssize);
+        if (newProcess->userStack == NULL) {
+            mem_free(newProcess, sizeof(Process));
+            return -1;
+        }
+
+        newProcess->userStack[ssize + NB_ARGS_USER_STACK - 2] = (uint32_t) 0x1000005;
         newProcess->userStack[ssize + NB_ARGS_USER_STACK - 1] = (uint32_t) arg;
 
         newProcess->executionStack[STACK_SIZE - 1] = USER_DS;
-        newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) &(newProcess->userStack);
+        // newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) userExit;
+        newProcess->executionStack[STACK_SIZE - 2] = (uint32_t) &newProcess->userStack[ssize + NB_ARGS_USER_STACK - 2];
         newProcess->executionStack[STACK_SIZE - 3] = 0x202;
         newProcess->executionStack[STACK_SIZE - 4] = USER_CS;
         newProcess->executionStack[STACK_SIZE - 5] = (uint32_t) pt_func;
@@ -350,9 +368,9 @@ void deleteProcess(Process* process) {
 
     nbStartProcess--;
 
-    if (process->pid != FIRST_PID) {
+    if (process->pid != FIRST_PID && process->userStack != NULL) {
         // Si processus user
-        user_stack_free(process->userStack, sizeof(uint32_t*) * (process->ssize + NB_ARGS_USER_STACK));
+        user_stack_free(process->userStack, process->ssize);
     }
 
     if (process->parent != NULL) {
@@ -420,10 +438,19 @@ int waitpid(int pid, int *retvalp) {
     runningProcess->waitChildPid = pid;
 
     if (pid < 0) {
+
+        // Le processus n'a aucun fils
+        if (queue_empty(&runningProcess->children)) {
+            return -1;
+        }
+
+        // Le processus n'a aucun fils en zombie
         if (isZombieChildrenQueueEmpty(runningProcess)) {
             switchState(runningProcess, BLOCKED_CHILD);
             ordonnance();
         }
+
+        // Récupère le premier fils a être passé en état Zombie
         targetProcess = getFirstZombieChild(runningProcess);
     } else {
         // Si aucun processus n'a ce PID ou que le processus n'est pas son enfant.

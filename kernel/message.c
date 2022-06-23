@@ -284,7 +284,7 @@ int preceive(int fid, int *message) {
             return -1; // La file a été supprimée
         }
 
-        if (runningProcess->message != 0) {
+        if (message != NULL) {
             *message = runningProcess->message;
         }
 

@@ -23,3 +23,7 @@ void avancer_curseur();
 void defilement(void);
 
 void console_putbytes(const char *chaine, int32_t taille);
+
+void cons_write(const char *str, long size);
+
+int cons_read(char *string, unsigned long length);
